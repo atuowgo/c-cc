@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+out
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Cache
+.eslintcache
+*.tsbuildinfo
+.turbo
+
+# Logs
+*.log*
+
+# Test
+coverage
+
+# Electron-builder artifacts
+release
+
+# Claude Code
+.claude
+.claude-code
+
+# Misc
+tsc_output.txt
