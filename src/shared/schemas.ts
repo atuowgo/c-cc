@@ -73,7 +73,7 @@ export const MCPAddSchema = z.object({
   args: z.array(z.string()).optional(),
   url: z.string().optional(),
   transport: MCPTransportSchema,
-  env: z.record(z.string()).optional()
+  env: z.record(z.string(), z.string()).optional()
 })
 
 export const MCPDeleteSchema = z.object({

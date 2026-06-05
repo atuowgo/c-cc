@@ -1,5 +1,10 @@
 appId: com.electron.app
 productName: cc-bot
+electronDownload:
+  mirror: https://npmmirror.com/mirrors/electron/
+asar:
+  smartUnpack: true
+  disableAsarIntegrity: true
 directories:
   buildResources: build
 files:
