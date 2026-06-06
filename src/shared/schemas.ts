@@ -18,7 +18,7 @@ export const ApiProviderSchema = z.enum(['anthropic', 'bedrock', 'vertex', 'azur
 
 // --- 会话创建 ---
 export const CreateSessionSchema = z.object({
-  projectDir: z.string().min(1),
+  projectDir: z.string().optional(),
   model: z.string().optional(),
   permMode: PermissionModeSchema.optional().default('default'),
   title: z.string().optional()

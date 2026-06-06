@@ -31,7 +31,10 @@ function setupStreamForwarding(): void {
   const forward = (channel: string, data: unknown): void => {
     const win = windowManager.getMainWindow()
     if (win && !win.isDestroyed()) {
+      console.log(`[forward] ${channel}`, JSON.stringify(data).slice(0, 120))
       win.webContents.send(channel, data)
+    } else {
+      console.warn(`[forward] no window for channel=${channel}`)
     }
   }
 

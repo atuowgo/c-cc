@@ -33,13 +33,13 @@ export default function Sidebar(): React.JSX.Element {
 
   const handleNewSession = async (): Promise<void> => {
     try {
-      const dir = await window.claudeAPI.file.pickDirectory()
-      if (dir) {
-        await window.claudeAPI.session.create({ projectDir: dir.path })
-        await useSessionStore.getState().fetchSessions()
+      const session = await window.claudeAPI.session.create({})
+      await useSessionStore.getState().fetchSessions()
+      if (session?.id) {
+        useSessionStore.getState().setActiveSession(session.id)
       }
     } catch {
-      // user cancelled or error
+      // error
     }
   }
 

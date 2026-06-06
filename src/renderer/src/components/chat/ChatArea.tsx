@@ -5,7 +5,10 @@ import { useChatStore } from '@renderer/stores/useChatStore'
 import { cn } from '@renderer/lib/utils'
 import MessageBubble from './MessageBubble'
 import ToolCallCard from './ToolCallCard'
-import type { Message } from '@shared/types'
+import type { Message, ToolCall } from '@shared/types'
+
+const EMPTY_MESSAGES: Message[] = []
+const EMPTY_TOOL_CALLS: ToolCall[] = []
 
 interface ChatAreaProps {
   sessionId: string
@@ -31,10 +34,10 @@ function groupMessages(messages: Message[]): Message[] {
 }
 
 export default function ChatArea({ sessionId }: ChatAreaProps): React.JSX.Element {
-  const messages = useChatStore((s) => s.messages[sessionId] || [])
-  const streamingContent = useChatStore((s) => s.streamingContent[sessionId] || '')
-  const isStreaming = useChatStore((s) => s.isStreaming[sessionId] || false)
-  const toolCalls = useChatStore((s) => s.toolCalls[sessionId] || [])
+  const messages = useChatStore((s) => s.messages[sessionId] ?? EMPTY_MESSAGES)
+  const streamingContent = useChatStore((s) => s.streamingContent[sessionId] ?? '')
+  const isStreaming = useChatStore((s) => s.isStreaming[sessionId] ?? false)
+  const toolCalls = useChatStore((s) => s.toolCalls[sessionId] ?? EMPTY_TOOL_CALLS)
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 

@@ -15,7 +15,7 @@ export interface AgentSDKBridgeOptions {
 }
 
 export declare interface AgentSDKBridge {
-  on(event: 'stream:chunk', listener: (chunk: { sessionId: string; type: string; content: string }) => void): this
+  on(event: 'stream:chunk', listener: (chunk: { sessionId: string; type: string; data: { text: string } }) => void): this
   on(event: 'stream:tool-use', listener: (tool: { sessionId: string; toolUse: ToolUse }) => void): this
   on(event: 'stream:tool-result', listener: (result: { sessionId: string; toolResult: ToolResult }) => void): this
   on(event: 'stream:complete', listener: (data: { sessionId: string; messages: MessageContent[] }) => void): this
@@ -138,18 +138,20 @@ export class AgentSDKBridge extends EventEmitter {
       sdkOptions.hooks = hooks
 
       // 执行 query
+      console.log(`[AgentSDKBridge] query starting session=${this.sessionId} model=${this.model}`)
       const generator = query({
         prompt,
         options: sdkOptions as Record<string, unknown>
       }) as AsyncGenerator<Record<string, unknown>, void, unknown>
 
+      let msgCount = 0
       for await (const msg of generator) {
         if (this.abortController?.signal.aborted) break
+        msgCount++
+        console.log(`[AgentSDKBridge] msg #${msgCount} type=${msg.type}`)
         this.processSDKMessage(msg)
       }
-
-      // 保存 SDK session ID（从最后一条消息中提取）
-      // SDK 在 resume 时会用到这个 ID
+      console.log(`[AgentSDKBridge] query finished, total msgs=${msgCount}`)
 
       this.emit('stream:complete', {
         sessionId: this.sessionId,
@@ -195,7 +197,7 @@ export class AgentSDKBridge extends EventEmitter {
           this.emit('stream:chunk', {
             sessionId: this.sessionId,
             type,
-            content
+            data: { text: content }
           })
         }
 

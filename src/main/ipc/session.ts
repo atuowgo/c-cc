@@ -9,8 +9,10 @@ export function registerSessionHandlers(sessionManager: SessionManager): void {
   })
 
   ipcMain.handle('session:send', async (_event, args) => {
+    console.log('[IPC session:send] received', JSON.stringify(args).slice(0, 120))
     const parsed = SendMessageSchema.parse(args)
     await sessionManager.sendMessage(parsed)
+    console.log('[IPC session:send] completed')
     return { success: true }
   })
 

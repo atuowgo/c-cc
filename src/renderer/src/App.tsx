@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useUIStore } from '@renderer/stores/useUIStore'
 import { useSessionStore } from '@renderer/stores/useSessionStore'
 import { useConfigStore } from '@renderer/stores/useConfigStore'
+import { useChatStore } from '@renderer/stores/useChatStore'
 import TitleBar from '@renderer/components/layout/TitleBar'
 import Sidebar from '@renderer/components/layout/Sidebar'
 import StatusBar from '@renderer/components/layout/StatusBar'
@@ -20,6 +21,81 @@ function App(): React.JSX.Element {
     fetchSessions()
     fetchConfig()
   }, [])
+
+  // Load messages when active session changes
+  useEffect(() => {
+    if (!activeSessionId) return
+    window.claudeAPI.session.resume(activeSessionId)
+      .then(({ messages }) => {
+        useChatStore.getState().setMessages(activeSessionId, messages)
+      })
+      .catch(() => {})
+  }, [activeSessionId])
+
+  // Wire IPC stream events → useChatStore
+  useEffect(() => {
+    const unsubChunk = window.claudeAPI.onStreamChunk((chunk) => {
+      console.log('[App] onStreamChunk', chunk.sessionId, chunk.type, JSON.stringify(chunk).slice(0, 80))
+      if (chunk.type === 'text' && typeof chunk.data?.text === 'string') {
+        useChatStore.getState().appendStreamContent(chunk.sessionId, chunk.data.text)
+      }
+    })
+
+    const unsubToolUse = window.claudeAPI.onToolUse((data) => {
+      useChatStore.getState().addToolCall(data.sessionId, {
+        id: `tc-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        messageId: '',
+        toolName: data.toolName,
+        toolInput: JSON.stringify(data.toolInput),
+        toolResult: '{}',
+        status: 'pending',
+        createdAt: Date.now()
+      })
+    })
+
+    const unsubToolResult = window.claudeAPI.onToolResult((data) => {
+      const store = useChatStore.getState()
+      const toolCalls = store.toolCalls[data.sessionId] ?? []
+      const last = [...toolCalls].reverse().find((tc) => tc.status === 'pending')
+      if (last) {
+        store.updateToolCall(data.sessionId, last.id, {
+          toolResult: data.content,
+          status: data.isError ? 'error' : 'success'
+        })
+      }
+    })
+
+    const unsubComplete = window.claudeAPI.onStreamComplete((data) => {
+      console.log('[App] onStreamComplete', data.sessionId)
+      const store = useChatStore.getState()
+      const content = store.streamingContent[data.sessionId]
+      if (content) {
+        store.addMessage(data.sessionId, {
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          sessionId: data.sessionId,
+          role: 'assistant',
+          content: { text: content },
+          createdAt: Date.now()
+        })
+        store.setStreamContent(data.sessionId, '')
+      }
+      store.setIsStreaming(data.sessionId, false)
+      fetchSessions()
+    })
+
+    const unsubError = window.claudeAPI.onStreamError((data) => {
+      console.error('[App] onStreamError', data.sessionId, data.error)
+      useChatStore.getState().setIsStreaming(data.sessionId, false)
+    })
+
+    return () => {
+      unsubChunk()
+      unsubToolUse()
+      unsubToolResult()
+      unsubComplete()
+      unsubError()
+    }
+  }, [fetchSessions])
 
   return (
     <div className="h-screen flex flex-col bg-[#0d1117] text-gray-100 overflow-hidden">

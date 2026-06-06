@@ -88,7 +88,7 @@ export interface UsageStats {
 
 // --- 会话创建参数 ---
 export interface CreateSessionParams {
-  projectDir: string
+  projectDir?: string
   model?: ModelName
   permMode?: PermissionMode
   title?: string

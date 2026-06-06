@@ -1,11 +1,12 @@
-import { ipcMain, dialog } from 'electron'
+import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { readFileSync } from 'fs'
 import { basename } from 'path'
 import type { FileAttachment } from '../../shared/types'
 
 export function registerFileHandlers(): void {
-  ipcMain.handle('file:pick-directory', async () => {
-    const result = await dialog.showOpenDialog({
+  ipcMain.handle('file:pick-directory', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(win!, {
       properties: ['openDirectory']
     })
 
@@ -16,10 +17,11 @@ export function registerFileHandlers(): void {
     return { path: result.filePaths[0] }
   })
 
-  ipcMain.handle('file:pick-files', async (_event, args) => {
+  ipcMain.handle('file:pick-files', async (event, args) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
     const filters = (args as { filters?: Array<{ name: string; extensions: string[] }> })?.filters ?? []
 
-    const result = await dialog.showOpenDialog({
+    const result = await dialog.showOpenDialog(win!, {
       properties: ['openFile', 'multiSelections'],
       filters
     })

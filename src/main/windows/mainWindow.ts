@@ -21,7 +21,7 @@ export function createMainWindow(): BrowserWindow {
       : { frame: false }),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../../preload/index.js'),
+      preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -34,6 +34,9 @@ export function createMainWindow(): BrowserWindow {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    if (is.dev) {
+      mainWindow.webContents.openDevTools({ mode: 'detach' })
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

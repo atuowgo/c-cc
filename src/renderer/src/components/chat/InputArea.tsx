@@ -3,6 +3,7 @@ import { ArrowUp, Square, Paperclip, AtSign, X } from 'lucide-react'
 import { cn } from '@renderer/lib/utils'
 import { useChatStore } from '@renderer/stores/useChatStore'
 import type { FileAttachment } from '@shared/types'
+import type { Message } from '@shared/types'
 
 interface InputAreaProps {
   sessionId: string
@@ -33,16 +34,28 @@ export default function InputArea({ sessionId }: InputAreaProps): React.JSX.Elem
     const trimmed = text.trim()
     if (!trimmed || isStreaming) return
 
+    const now = Date.now()
+    const userMsg: Message = {
+      id: `msg-${now}-${Math.random().toString(36).slice(2, 7)}`,
+      sessionId,
+      role: 'user',
+      content: { text: trimmed },
+      createdAt: now
+    }
+    useChatStore.getState().addMessage(sessionId, userMsg)
+    useChatStore.getState().setIsStreaming(sessionId, true)
+
+    const pendingAttachments = attachments.length > 0 ? attachments : undefined
+    setText('')
+    setAttachments([])
+
+    console.log('[InputArea] calling session.send', { sessionId, prompt: trimmed.slice(0, 60) })
     try {
-      await window.claudeAPI.session.send(
-        sessionId,
-        trimmed,
-        attachments.length > 0 ? attachments : undefined
-      )
-      setText('')
-      setAttachments([])
-    } catch {
-      // Handle error
+      const result = await window.claudeAPI.session.send(sessionId, trimmed, pendingAttachments)
+      console.log('[InputArea] session.send resolved', result)
+    } catch (err) {
+      console.error('[InputArea] session.send error', err)
+      useChatStore.getState().setIsStreaming(sessionId, false)
     }
   }
 
@@ -55,7 +68,7 @@ export default function InputArea({ sessionId }: InputAreaProps): React.JSX.Elem
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
@@ -130,7 +143,7 @@ export default function InputArea({ sessionId }: InputAreaProps): React.JSX.Elem
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="输入消息... (Ctrl+Enter 发送, Esc 中断)"
+          placeholder="输入消息... (Enter 发送, Shift+Enter 换行, Esc 中断)"
           rows={2}
           disabled={isStreaming}
           className={cn(

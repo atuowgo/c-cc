@@ -1,4 +1,7 @@
 import { EventEmitter } from 'events'
+import { homedir } from 'os'
+import { join } from 'path'
+import { mkdirSync } from 'fs'
 import { databaseService } from './DatabaseService.js'
 import { AgentSDKBridge } from './AgentSDKBridge.js'
 import { configManager } from './ConfigManager.js'
@@ -31,7 +34,7 @@ function generateToolCallId(): string {
 }
 
 export declare interface SessionManager {
-  on(event: 'stream:chunk', listener: (data: { sessionId: string; type: string; content: string }) => void): this
+  on(event: 'stream:chunk', listener: (data: { sessionId: string; type: string; data: { text: string } }) => void): this
   on(event: 'stream:tool-use', listener: (data: { sessionId: string; toolName: string; toolInput: Record<string, unknown> }) => void): this
   on(event: 'stream:tool-result', listener: (data: { sessionId: string; toolCallId: string; content: string; isError: boolean }) => void): this
   on(event: 'stream:complete', listener: (data: { sessionId: string }) => void): this
@@ -45,10 +48,16 @@ export class SessionManager extends EventEmitter {
   createSession(params: CreateSessionParams): Session {
     const config = configManager.getConfig()
     const now = Date.now()
+    const id = generateId()
+    let projectDir = params.projectDir
+    if (!projectDir) {
+      projectDir = join(homedir(), '.c-cc', 'sessions', id)
+      mkdirSync(projectDir, { recursive: true })
+    }
     const session: Session = {
-      id: generateId(),
+      id,
       title: params.title ?? `Session ${new Date(now).toLocaleString()}`,
-      projectDir: params.projectDir,
+      projectDir,
       model: params.model ?? config.defaultModel,
       permMode: params.permMode ?? config.defaultPermMode,
       createdAt: now,
@@ -75,6 +84,7 @@ export class SessionManager extends EventEmitter {
     skills?: Skill[]
   ): Promise<void> {
     const { sessionId, prompt } = params
+    console.log(`[SessionManager] sendMessage sessionId=${sessionId} prompt="${prompt.slice(0, 60)}"`)
 
     const session = databaseService.getSession(sessionId)
     if (!session) {
@@ -108,7 +118,15 @@ export class SessionManager extends EventEmitter {
       this.activeBridges.set(sessionId, this.setupBridgeListeners(bridge))
     }
 
+    console.log(`[SessionManager] bridge.run starting for ${sessionId}`)
     await bridge.run(prompt)
+    console.log(`[SessionManager] bridge.run completed for ${sessionId}`)
+
+    const current = databaseService.getSession(sessionId)
+    if (current && /^Session \d/.test(current.title)) {
+      const autoTitle = prompt.replace(/\n/g, ' ').slice(0, 50)
+      databaseService.updateSession(sessionId, { title: autoTitle })
+    }
   }
 
   private setupBridgeListeners(bridge: AgentSDKBridge): AgentSDKBridge {
