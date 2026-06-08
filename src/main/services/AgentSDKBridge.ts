@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 import { query } from '@anthropic-ai/claude-agent-sdk'
 import type { PermissionMode, MCPServerConfig, Skill, MessageContent, ToolUse, ToolResult } from '../../shared/index.js'
-import { configManager } from './ConfigManager.js'
+import { configManager, getAppClaudeDir } from './ConfigManager.js'
 
 export interface AgentSDKBridgeOptions {
   sessionId: string
@@ -107,6 +107,12 @@ export class AgentSDKBridge extends EventEmitter {
       // Proxy
       if (config.proxy) {
         sdkOptions.proxy = config.proxy
+      }
+
+      // 重定向 claude 子进程的配置目录，与系统 ~/.claude 隔离
+      sdkOptions.env = {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: getAppClaudeDir()
       }
 
       // 权限钩子

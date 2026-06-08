@@ -1,26 +1,22 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
-import { homedir } from 'os'
 import type { MCPServerConfig, MCPServerStatus } from '../../shared/index.js'
+import { getAppClaudeDir } from './ConfigManager.js'
 
-const CLAUDE_CONFIG_DIR = join(homedir(), '.claude')
-const CLAUDE_CONFIG_PATH = join(CLAUDE_CONFIG_DIR, 'claude.json')
+function getConfigPath(): string {
+  return join(getAppClaudeDir(), 'claude.json')
+}
 
 interface ClaudeConfig {
   mcpServers?: Record<string, MCPServerConfig>
   [key: string]: unknown
 }
 
-function ensureDir(dir: string): void {
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
-  }
-}
-
 function readClaudeConfig(): ClaudeConfig {
+  const configPath = getConfigPath()
   try {
-    if (existsSync(CLAUDE_CONFIG_PATH)) {
-      const raw = readFileSync(CLAUDE_CONFIG_PATH, 'utf-8')
+    if (existsSync(configPath)) {
+      const raw = readFileSync(configPath, 'utf-8')
       return JSON.parse(raw) as ClaudeConfig
     }
   } catch (err) {
@@ -30,9 +26,9 @@ function readClaudeConfig(): ClaudeConfig {
 }
 
 function writeClaudeConfig(config: ClaudeConfig): void {
+  const configPath = getConfigPath()
   try {
-    ensureDir(CLAUDE_CONFIG_DIR)
-    writeFileSync(CLAUDE_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
+    writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
   } catch (err) {
     console.error('[MCPManager] Failed to write claude.json:', err)
     throw err

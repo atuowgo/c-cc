@@ -1,8 +1,23 @@
 import Store from 'electron-store'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import { homedir } from 'os'
+import { app } from 'electron'
 import type { AppConfig, WindowState } from '../../shared/index.js'
+
+/**
+ * 返回本应用专属的 .claude 配置目录。
+ * 结构与 ~/.claude 完全相同，但与系统全局安装的 Claude Code 隔离。
+ * macOS:   ~/Library/Application Support/cc-bot/.claude/
+ * Windows: C:\Users\<user>\AppData\Roaming\cc-bot\.claude\
+ * Linux:   ~/.config/cc-bot/.claude/
+ */
+export function getAppClaudeDir(): string {
+  const dir = join(app.getPath('userData'), '.claude')
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
+  }
+  return dir
+}
 
 let keytar: typeof import('keytar') | null = null
 try {
@@ -154,7 +169,7 @@ export class ConfigManager {
     if (scope === 'project' && projectDir) {
       return join(projectDir, 'CLAUDE.md')
     }
-    return join(homedir(), '.claude', 'CLAUDE.md')
+    return join(getAppClaudeDir(), 'CLAUDE.md')
   }
 }
 

@@ -1,9 +1,9 @@
 import { readFileSync, existsSync, readdirSync, statSync, mkdirSync, copyFileSync } from 'fs'
 import { join, basename, dirname } from 'path'
-import { homedir } from 'os'
 import type { Skill } from '../../shared/index.js'
+import { getAppClaudeDir } from './ConfigManager.js'
 
-const SKILLS_DIR = join(homedir(), '.claude', 'skills')
+const SKILLS_DIR = join(getAppClaudeDir(), 'skills')
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) {
